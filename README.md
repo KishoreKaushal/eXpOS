@@ -36,6 +36,7 @@
 * In Multiuser implementation of eXpOS the username of a data file corresponds to the user who creates the file.
 * If a data file is externally loaded into the file system the owner field is set to root(value=1) and the access permission is set to open access(value=1).
 
+
 ### eXpFS Executable Files
 
 * eXpFS specification does not allow executable files to be created by application programs. They can only be created externally and loaded using the external interface.
@@ -49,4 +50,42 @@
 XFS Interface (eXperimental File System Interface) is an external interface to access the eXpFS filesystem of the eXpOS "from the host (UNIX) system". The filesystem is simulated on a binary file called __disk.xfs__. The interface can format the disk, dump the disk data structures, load/remove files, list files, transfer data and executable files between eXpFS filesystem and the host (UNIX) file system and copy specified blocks of the XFS disk to a UNIX file.
 
 __Note__ : XFS interface must not be run while the XSM simulator is run concurrently as it might leave the file system in inconsistent state.
+
+## 3. Understanding the File System
+
+The eXpOS package mainly consists of a machine simulator. he machine is called the **eXperimental String Machine (XSM)** and consists of a processor, memory and disk.
+
+The package comes with three major support tools - two compilers and a disk interface tool called **XFS-Interface**. XSM machine's disk contains 512 blocks, each capable of storing 512 words.
+
+The eXpFS format specifies that each data/executable file can span across at most four data blocks, and that the index to these blocks along with the name and the size of the file must be stored in a pre-define area of the disk called the **Inode table**. (The inode table is stored in disk blocks 3 and 4).
+
+The eXperimental Filesystem (eXpFS) is a simulated filesystem. A UNIX file named **"disk.xfs"** simulates the hard disk of the XSM machine. Building eXpOS begins with understanding the underlying filesystem (eXpFS) and its interface (xfs-interface) to the host (UNIX) environment. The xfs-interface is used for transferring files between your linux system and the xsm disk.
+
+### Inode Table
+
+* Inode table is stored in disk blocks 3 & 4.
+* It has an entry for each file present in the disk.
+* A copy of the Inode table is maintained in the memory when the OS is running.
+* It consists of **MAX_FILE_NUM** entries. Thus eXpFS permits a maximum of **MAX_FILE_NUM** files. This version of eXpOS sets **MAX_FILE_NUM** = 60.
+
+The entry of an Inode table has the following format:
+* FILE TYPE (1 word) - specifies the type of the given file (DATA, EXEC or ROOT).
+* FILE NAME (1 word) - Name of the file
+* FILE SIZE (1 word) - Size of the file. Maximum size for File = **MAX_FILE_SIZE = 2048 words**
+* USER ID (1 word) - User Id of the owner of the file.
+* PERMISSION (1 word) - Permission of the file; it can be OPEN_ACCESS or EXCLUSIVE.
+* Unused (3 words)
+* DATA BLOCK 1 to 4 (4 words) - each DATA BLOCK column stores the block number of a data block of the file. If a file does not use a particular DATA BLOCK , it is set to -1.
+* Unused (4 words)
+
+An unused entry is indicated by -1 in the FILE NAME field.
+
+__Note 1__ : fdisk command of XFS Interface initilizes the inode table entry of the root file with values FILE TYPE = 1, FILE SIZE = 512, and DATA BLOCK = 5 (Root file is stored in block 5 of disk.)
+
+__Note 2__ : A Free inode entry is denoted by -1 in the FILENAME field.
+
+__Note 3__ : Memory copy of the Inode Table is present in page 59 of the memory (see Memory Organisation), and the SPL constant INODE_TABLE points to the starting address of the table.
+
+
+
 
