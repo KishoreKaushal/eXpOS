@@ -86,6 +86,55 @@ __Note 2__ : A Free inode entry is denoted by -1 in the FILENAME field.
 
 __Note 3__ : Memory copy of the Inode Table is present in page 59 of the memory (see Memory Organisation), and the SPL constant INODE_TABLE points to the starting address of the table.
 
+## 4. Bootstrap Loader
+
+### XSM Instruction Execution Cycle
+
+* The CPU of the XSM machine contains 20 general-purpose registers R0-R19, each of which can store an integer or a string.
+* Along with these are the registers stack pointer (SP), base pointer (BP) and instruction pointer (IP).
+* There are special purpose registers: PTBR, PTLR, EIP, EC, EPN, EMA and four ports P0, P1, P2, P3.
+* The machine's memory consists of 65536 memory words. Each word can store an integer or a string. The memory is divided into pages of 512 words each.
+* The memory is **word addressable**. This means that XSM provides instructions that allows you to access any memory word. 
+* __The machine also has a disk having 512 blocks. Each disk block can store 512 words. Thus the total storage capacity is 512 x 512 = 262144 words. However, the disk is block addressable and not word addressable.__
+* XSM provides just three instructions to manipulate the disk – __LOAD, LOADI__ and __STORE__. These instructions can be used to transfer a disk block to a memory page or back.
+* The machine also has three devices – an I/O Console, a timer and disk controller. 
+
+
+### Boot-Up
+
+
+
+When the XSM machine is started up, the ROM Code, which resides in page 0 of the memory, is executed. It is hard-coded into the machine. 
+
+That is, the ROM code at physical address 0 (to 511) is "already there" when machine starts up. The ROM code is called the "Boot ROM" in OS literature. Boot ROM code does the following operations : 1.) Loads block 0 of the disk to page 1 of the memory (physical address 512).2.) After loading the block to memory, it sets the value of the register IP (Instruction Pointer) to 512 so that the next instruction is fetched from location 512 (page 1 in memory starts from location 512).
+
+What happens when the machine is powered on?
+
+* _All registers will be set to value zero._ In particular, IP register also assumes value 0. Once powered on, the machine will start repeatedly executing the following fetch-execute cycle in privileged mode. 
+1. Transfer the contents of two memory locations starting at the address stored in IP register to the CPU. The XSM machine treats the contents read like a machine instruction. This action is called the instruction fetch cycle. 
+2. The next step is the execute cycle where the instruction fetched in Step 1 is executed by the machine.
+3. The final step is to set the instruction pointer to the next instruction to be executed. Since each XSM instruction is two words, IP will normally be incremented by 2.
+
+The bootstrap code is hard coded into a boot ROM so that the memory contents are not lost even after machine shutdown. This is necessary because when the machine is powered on, there must be some meaningful instruction at address 0 from where the first fetch takes place.
+
+#### Loading a Boot-up code
+
+    $ ./xfs-interface
+    # load --os $HOME/myexpos/spl/spl_progs/helloworld.xsm
+    # exit
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
