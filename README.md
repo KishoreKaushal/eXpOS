@@ -102,8 +102,6 @@ __Note 3__ : Memory copy of the Inode Table is present in page 59 of the memory 
 
 ### Boot-Up
 
-
-
 When the XSM machine is started up, the ROM Code, which resides in page 0 of the memory, is executed. It is hard-coded into the machine. 
 
 That is, the ROM code at physical address 0 (to 511) is "already there" when machine starts up. The ROM code is called the "Boot ROM" in OS literature. Boot ROM code does the following operations : 1.) Loads block 0 of the disk to page 1 of the memory (physical address 512).2.) After loading the block to memory, it sets the value of the register IP (Instruction Pointer) to 512 so that the next instruction is fetched from location 512 (page 1 in memory starts from location 512).
@@ -123,16 +121,21 @@ The bootstrap code is hard coded into a boot ROM so that the memory contents are
     # load --os $HOME/myexpos/spl/spl_progs/helloworld.xsm
     # exit
 
+#### Counting numbers on Boot-Up
+
+    $ cat count20.xsm
+        MOV R16, 1
+        MOV R17 , 20
+        PORT P1, R16
+        OUT
+        INR R16
+        MOV R18 , R16
+        LE R18 , R17
+        JNZ R18 , 516
+        HALT
 
 
-
-
-
-
-
-
-
-
+## 5. Learning the SPL Language
 
 
 
