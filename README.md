@@ -137,6 +137,8 @@ The bootstrap code is hard coded into a boot ROM so that the memory contents are
 
 ## 5. Learning the SPL Language
 
+SPL (Systems Programming Language) allows high level programs to be written for the XSM machine (eliminating the need to write all the code in assembly language). SPL is not a full fledged programming language, but is an extension to the XSM assembly language with support for high level constructs like if-then-else, while-do etc. Programs written in SPL language needs to be compiled to XSM assembly code using the SPL compiler supplied along with the eXpOS package before loading for execution on the XSM simulator. You will be writing the eXpOS kernel using the SPL language.
+
 
 
 
