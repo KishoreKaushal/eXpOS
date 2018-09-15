@@ -1,4 +1,0 @@
-MOV R9 , "Stage6"
-MOV R16, R9
-PORT P1, R16
-INT 10

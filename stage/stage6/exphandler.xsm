@@ -1,4 +1,0 @@
-MOV R16,  "except: kaus"
-PORT P1, R16
-OUT
-HALT

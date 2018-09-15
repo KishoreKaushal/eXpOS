@@ -1,4 +1,0 @@
-MOV R16,  "bye bye"
-PORT P1, R16
-OUT
-HALT

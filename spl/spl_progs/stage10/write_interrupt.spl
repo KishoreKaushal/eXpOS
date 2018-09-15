@@ -20,13 +20,14 @@ userSP = SP;
 // Switch the stack from user stack to kernel stack
 // Save the value of SP in the user SP field of Process Table entry of the process.
 // Setting the UPTR
+
 [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 13] = userSP;
 
 // setting the value of SP to the beginning of the kernel stack 
 // User Area Page Number * 512 - 1
 // User Area Page Number => [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 11]
 
-SP = [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 13] * 512 - 1;
+SP = [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 12] * 512 - 1;
 
 // in kernel mode the address are not logical
 // Hence to access the file descriptor (argument 1) 
@@ -92,7 +93,7 @@ SP = userSP;
 // Value 0 indicates that process is running in user mode.
 
 [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 9] = 0;
-
+ireturn;
 
 
 
