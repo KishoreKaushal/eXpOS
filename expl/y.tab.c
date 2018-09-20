@@ -2913,8 +2913,6 @@ int main(int argc,char* argv[])
         else
             yyin = fp;
     }    
-    printf("Compilation started\n");
     yyparse(); 
-    printf("Compilation Succesful\n");
     return 0; 
 }
