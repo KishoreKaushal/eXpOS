@@ -1,0 +1,29 @@
+// get the PID of the current process 
+alias currentPID R0;
+currentPID = [SYSTEM_STATUS_TABLE + 1];
+
+// set the process state flag to terminated 
+[PROCESS_TABLE + currentPID * 16 + 4] = TERMINATED;
+
+// find out whether all the process except idle is terminated 
+// in that case, halt the system 
+// otherwise invoke the scheduler
+alias temp R1;
+temp= 0;
+alias counter R2;
+counter = 1;
+
+while(counter < MAX_PROC_NUM) do
+    if ([PROCESS_TABLE + counter * 16 + 4] != TERMINATED) then 
+        temp = 1;
+        break;
+    endif;
+    counter = counter + 1;
+endwhile;
+
+if (temp == 0) then 
+    print "Bye Bye!";
+    halt;
+endif;
+
+call MOD_5;

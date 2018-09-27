@@ -1,0 +1,40 @@
+// Switch from the user stack to kernel stack of the currently executing process 
+//print "timer";
+
+// storing the user stack pointer of the current running process to the UPTR process entry
+[PROCESS_TABLE + ( [SYSTEM_STATUS_TABLE + 1] * 16) + 13] = SP;
+
+// Setting SP to beginning of the User Page i.e., UArea Page number * 512 - 1, 
+// this is the place where backup instruction will store all the register values
+SP = [PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1]* 16) + 11] * 512 - 1;
+
+// save the register context using the backup instruction
+backup;
+
+//changing the state of the current process to READY from the RUNNING
+[PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16 + 4)] = READY;
+
+
+// -------------------------------------------------------------------------------
+
+// Loop through the process table entires and increment the TICK field of each process.
+alias pid R0;
+pid = 0;
+while (pid < 16) do
+    R1 = PROCESS_TABLE + PT_ENTRY_SIZE * pid;
+    [R1] = [R1] + 1;
+    pid = pid + 1;
+endwhile;
+
+call MOD_5;
+
+
+// -----------------------------------------------------------------------------
+restore;
+
+SP = [PROCESS_TABLE + ( [SYSTEM_STATUS_TABLE + 1] * 16) + 13];
+
+// setting the MODE flag
+[PROCESS_TABLE + ( [SYSTEM_STATUS_TABLE + 1] * 16) + 9] = 0;
+
+ireturn;

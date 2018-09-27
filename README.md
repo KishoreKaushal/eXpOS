@@ -40,7 +40,7 @@
 ### eXpFS Executable Files
 
 * eXpFS specification does not allow executable files to be created by application programs. They can only be created externally and loaded using the external interface.
-* The executable file format recognized by eXpOS is called the Ecperimental executable file (XEXE) format. In this format, an executable file is divided into two sections. 
+* The executable file format recognized by eXpOS is called the Ecperimental executable file (XEXE) format. In this format, an executable file is divided into two sections.
 * The first section is called __header__ and the second section called the __code (or text)__ section.
 * The code section contains the *program instructions*. The header section contains information like the size of the text and data segments in the file, the space to be allocated for stack and heap areas when the program is loaded for execution etc.
 
@@ -94,22 +94,22 @@ __Note 3__ : Memory copy of the Inode Table is present in page 59 of the memory 
 * Along with these are the registers stack pointer (SP), base pointer (BP) and instruction pointer (IP).
 * There are special purpose registers: PTBR, PTLR, EIP, EC, EPN, EMA and four ports P0, P1, P2, P3.
 * The machine's memory consists of 65536 memory words. Each word can store an integer or a string. The memory is divided into pages of 512 words each.
-* The memory is **word addressable**. This means that XSM provides instructions that allows you to access any memory word. 
+* The memory is **word addressable**. This means that XSM provides instructions that allows you to access any memory word.
 * __The machine also has a disk having 512 blocks. Each disk block can store 512 words. Thus the total storage capacity is 512 x 512 = 262144 words. However, the disk is block addressable and not word addressable.__
 * XSM provides just three instructions to manipulate the disk – __LOAD, LOADI__ and __STORE__. These instructions can be used to transfer a disk block to a memory page or back.
-* The machine also has three devices – an I/O Console, a timer and disk controller. 
+* The machine also has three devices – an I/O Console, a timer and disk controller.
 
 
 ### Boot-Up
 
-When the XSM machine is started up, the ROM Code, which resides in page 0 of the memory, is executed. It is hard-coded into the machine. 
+When the XSM machine is started up, the ROM Code, which resides in page 0 of the memory, is executed. It is hard-coded into the machine.
 
 That is, the ROM code at physical address 0 (to 511) is "already there" when machine starts up. The ROM code is called the "Boot ROM" in OS literature. Boot ROM code does the following operations : 1.) Loads block 0 of the disk to page 1 of the memory (physical address 512).2.) After loading the block to memory, it sets the value of the register IP (Instruction Pointer) to 512 so that the next instruction is fetched from location 512 (page 1 in memory starts from location 512).
 
 What happens when the machine is powered on?
 
-* _All registers will be set to value zero._ In particular, IP register also assumes value 0. Once powered on, the machine will start repeatedly executing the following fetch-execute cycle in privileged mode. 
-1. Transfer the contents of two memory locations starting at the address stored in IP register to the CPU. The XSM machine treats the contents read like a machine instruction. This action is called the instruction fetch cycle. 
+* _All registers will be set to value zero._ In particular, IP register also assumes value 0. Once powered on, the machine will start repeatedly executing the following fetch-execute cycle in privileged mode.
+1. Transfer the contents of two memory locations starting at the address stored in IP register to the CPU. The XSM machine treats the contents read like a machine instruction. This action is called the instruction fetch cycle.
 2. The next step is the execute cycle where the instruction fetched in Step 1 is executed by the machine.
 3. The final step is to set the instruction pointer to the next instruction to be executed. Since each XSM instruction is two words, IP will normally be incremented by 2.
 
@@ -135,7 +135,16 @@ The bootstrap code is hard coded into a boot ROM so that the memory contents are
         HALT
 
 
-## 5. XSM Virtual Machine Model
+## 5. XSM Unprivileged Mode Execution & Virtual Machine Model
+
+In the privileged mode, a memory address referes to the actual physical memory address. For eg., the instruction sequence:
+```
+    MOV SP, 1000
+    PUSH R0
+```
+MOV instruction sets the stack pointer register SP to 1000 and then the PUSH instruction will first increment SP (to value 1001) and then transfers contents of the register R0 to the top of the stack - that is - to the memory location 1001 pointed to by SP.
+
+PUSH and other *unprivileged instructions* have a different behaviour when executed in unprivileged mode. PUSH will increment SP to 1001 as before, but in unprivileged mode the address are not physical address instead they are logical and hence the address translation mechanism of XSM is used to convert it to physical address and then transfer the contents of R0 to that location.
 
 User programs are executed in unpriviledged mode. Consequently, the privileged mode instructions cannot be used by them. Their memory view and registers available are also limited.
 
@@ -164,10 +173,10 @@ _Each Page Table stores the physical page number corresponding to all the logica
 
 Each page table entry for a logical page is of __2 words__. The 1st word must be set to the physical page number in the memory where the logical page is actually loaded. In this case, the page table entry is said to be __valid__. If the page has not been loaded into the memory, the page table entry is said to be **invalid**.
 
-The 2nd word in a page table entry stores a sequence of flag bits storing information regarding whether the page 
-a) is valid or not 
-b) is read only/read write, 
-c) has been referenced in the user mode after being set to valid, and 
+The 2nd word in a page table entry stores a sequence of flag bits storing information regarding whether the page
+a) is valid or not
+b) is read only/read write,
+c) has been referenced in the user mode after being set to valid, and
 d) has been modified in the user mode after being set to valid (dirty).
 
 * __Reference Bit(R)__ : As soon as the page is accessed for the first time, this bit is changed from 0 to 1
@@ -207,7 +216,7 @@ The virtual address space (or the logical address space) of an application is a 
 
 Each application's code and data must fit into its logical address space. The OS views this address space as being divided into logical pages of 512 words each. Hence logical addresses 0 to 511 belongs to logical page 0 of the program, logical addresses 512 to 1023 belongs to logical page 1 and so forth.
 
-The XSM machine on the other hand has 128 physical pages into which the logical pages of all programs running in the system has to be mapped into. Hence, there needs to be some data structure to map the logical pages of each program to the corresponding physical pages. This data structure is called the page table. The OS maintains a seperate page table for each program that stores the physical page number to which each logical page of the program is mapped to. 
+The XSM machine on the other hand has 128 physical pages into which the logical pages of all programs running in the system has to be mapped into. Hence, there needs to be some data structure to map the logical pages of each program to the corresponding physical pages. This data structure is called the page table. The OS maintains a seperate page table for each program that stores the physical page number to which each logical page of the program is mapped to.
 
 ### Setting Up Paging for an Application
 
@@ -218,7 +227,12 @@ Steps:
 3. Set up the application's stack. Set SP to point to the top of the stack.
 4. Compute the physical address corresponding to the logical address in SP. Then, copy the logical address of the first instruction (entry point) that much be fetched after IRET into this physical memory location and execute IRET.
 
+### Interrupts
 
+A program running in the unpriviledged mode may switch the machine back to the privileged mode using the trap instruction INT n, where n can take values from 4 to 18. The INT n instruction will result in the following:
+1. Increment the SP and transfer contents of IP register to the stack. (SP register holds the logical address of the top of the stack).
+2. IP is loaded with a value that depends on the value of n.
+3. Machine switches to privileged mode.  
 
 ## 7. Running a user Program(unpriviledged mode)
 
@@ -227,9 +241,4 @@ Steps:
 * Write a user program in assembly language and load it into the disk as the INIT program using XFS-Interface.
 * Write the OS startup code such that it loads the INIT program into the memory and initiate its execution at the time of system startup.
 
- 
-
-
-
-
-
+> In OS jargon, a user program in execution is called a process.
