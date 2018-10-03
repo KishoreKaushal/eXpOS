@@ -1,0 +1,97 @@
+// pushing the BP on the kernel stack of the current process
+multipush (BP);
+
+// obtain the PID of the current process from the SYSTEM_STATUS_TABLE
+alias currentPID R0;
+currentPID = [SYSTEM_STATUS_TABLE + 1];
+
+//print "currentPID";
+//print currentPID;
+
+
+alias process_table_entry R1;
+process_table_entry = PROCESS_TABLE + currentPID * 16;
+
+// KPTR
+[process_table_entry + 12] = SP % 512;
+
+// PTBR
+[process_table_entry + 14] = PTBR;
+
+// PTLR
+[process_table_entry + 15] = PTLR;
+
+// finding a process which is READY/CREATED starting from the current process ID
+
+alias newPID R10;
+alias counter R11;
+alias temp R12;
+
+newPID = currentPID;
+temp = TERMINATED;
+counter = 1;
+
+while(counter < MAX_PROC_NUM) do
+    newPID = newPID + 1;
+    
+    // since process 0 is IDLE process 
+    if (newPID == MAX_PROC_NUM) then 
+        newPID = 1;
+    endif;
+    
+    //print "pid loop:";
+    //print newPID;
+
+    // state of the this process
+    temp = [PROCESS_TABLE + newPID * PT_ENTRY_SIZE + 4];
+
+    // if state is READY/CREATED then select this process
+    if ( temp == READY || temp == CREATED) then 
+        break;
+    endif;
+
+    counter = counter + 1;
+endwhile;
+
+// if no other process is READY to run then select the IDLE process
+if (newPID == currentPID) then 
+    newPID = 0; // IDLE process 
+endif;
+
+// set the process table entry details for the newly selected process 
+process_table_entry = PROCESS_TABLE + newPID * PT_ENTRY_SIZE ; 
+
+SP = [process_table_entry + 11] * 512 + [process_table_entry + 12];
+
+// restoring the PTBR and PTLR
+PTBR = [process_table_entry + 14];
+PTLR = [process_table_entry + 15];
+
+[SYSTEM_STATUS_TABLE + 1] = newPID;
+//print "newPID";
+//print newPID;
+
+// if the new process in the CREATED state 
+if ([process_table_entry + 4] == CREATED) then
+    // set the SP to value in UPTR process table entry
+    SP = [process_table_entry + 13];
+    // set the state to RUNNING
+    [process_table_entry + 4] = RUNNING;
+    // storing 0 in the MODE flag in process table entry 
+    [process_table_entry + 9] = 0;
+    // switch to the USER MODE using the ireturn mode 
+    breakpoint;
+    //print "ireturn";
+    //print SP;
+    ireturn;
+endif;
+
+// set the state to RUNNING
+[process_table_entry + 4] = RUNNING;
+
+// restoring the BP pointer from the top of its kernel stack 
+multipop (BP);
+
+// return
+//print "return";
+return ;

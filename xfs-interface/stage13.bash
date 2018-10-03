@@ -1,3 +1,4 @@
+fdisk
 load --library /home/kaushal/Documents/git/eXpOS/expl/library.lib
 load --exhandler /home/kaushal/Documents/git/eXpOS/spl/spl_progs/common/exphandler.xsm
 load --int=10 /home/kaushal/Documents/git/eXpOS/spl/spl_progs/common/haltprog.xsm

@@ -242,3 +242,161 @@ A program running in the unpriviledged mode may switch the machine back to the p
 * Write the OS startup code such that it loads the INIT program into the memory and initiate its execution at the time of system startup.
 
 > In OS jargon, a user program in execution is called a process.
+
+While executing in the user mode, the machine uses logical addressing scheme. The machine translates logical addresses to physical addresses using the address translation mechanism.
+
+Load the following INIT program using the xfs-interface:
+
+```
+$ cat $HOME/myexpos/expl/expl_progs/squares.xsm
+MOV R0, 1
+MOV R2, 5
+GE R2, R0
+JZ R2, 18
+MOV R1, R0
+MUL R1, R0
+BRKP
+ADD R0, 1
+JMP 2
+INT 10
+$ xfs-interface
+# load --init $HOME/myexpos/expl/expl_progs/squares.xsm
+```
+
+The xfs-interface will sotre this program to disk blocks 7-8.
+
+### INT 10
+INT 10 instruction calls the exit system call to return control back to the operating system. INT 10 will invoke the software interrupt handler 10. Since we have only one user process for now, we will write the interrupt 10 handler with only the "halt" statement.
+
+Contents of the haltprog.spl:
+```
+print "Bye Bye";
+halt;
+```
+
+Compile the program and load:
+```
+load --int=10 ../spl/spl_progs/haltprog.xsm
+```
+
+### Exception handler
+
+The machine may raise an exception if it encounters any unexpected events like illegal instruction, invalid address, page table entry for a logical page not set valid etc. Our default action is to halt machine exection in the case of an exception. In later stages we'll learn to handle exceptions in a more elaborate way.
+
+Contents of the exceptionhandler.spl:
+```
+print "Exception";
+halt;
+```
+
+Compile and load:
+```
+load --exhandler ../spl/spl_progs/exceptionhandler.xsm
+```
+
+### OS startup code
+This is the first piece of the OS code to be executed on bootstrap, is responsible for loading the rest of the OS into the memory, initialize OS data structures and set up the first user program for execution.
+
+* Write the OS startup code to load the init program and setup the OS data structures necessary to run the program as a process. Finally, the OS startup code will transfer control to the init program using the IRET instruction.
+
+**STEPS:**
+
+1. Load the INIT program from disk blocks(7-8) to memory pages(65-66).
+2. Load the INT10 module from the disk blocks(35-36) to the memory pages(22-23).
+3. Load the exception handler routine from the disk blocks(15-16) to memory pages(2-3).
+4. Since, INIT is a user process page table must be set up for the address translation scheme to work correctly. Set **PTBR** (Page table base register) to the starting address of the page table of INIT. Set the PTLR.
+5. Initialize the page table entries of INIT.
+6. Set the top of the stack.
+7. Tranfer the control to the user process using IRET (unpriviledged mode). IRET performs the following operations:
+    * The instruction pointer is set to the value at the top of the user stack.
+    * The value of SP is decremented by 1.
+8. Compile and load the code.
+```
+# load --os $HOME/myexpos/spl/spl_progs/os_startup.xsm
+# exit
+```
+9. Run the machine in the debug mode (diable the timer interrupt for now).
+```
+./xsm --debug --timer 0
+```
+10. The final code may look like this:
+
+```
+// loading Init code
+loadi(65 , 7);
+loadi(66 , 8);
+
+// Interrupt 10 routine
+loadi(22 , 35);
+loadi(23 , 36);
+
+// exception handler
+loadi(2 , 15);
+loadi(3 , 16);
+
+PTBR = PAGE_TABLE_BASE;
+
+// total pages allocated to init code
+PTLR = 3;
+
+// page table entry
+[PTBR+8] = 65;
+[PTBR+9] = "0100";
+[PTBR+10] = 66;
+[PTBR+11] = "0100";
+[PTBR+16] = 76;
+[PTBR+17] = "0110";
+
+// top of the stack
+[76*512] = 0;
+// stack pointer
+SP = 2*512;
+
+ireturn;
+```
+
+## 8. ABI and XEXE Format
+
+Application binary interface is the interface between a user program and the kernel.
+
+eXpOS ABI defines the following:
+* __Machine Model__ : Instruction Set, Virtual Memory Address Space. Architecture Specific.
+* __Regions__ : text , stack , heap and library and the low level system call interface. Both the OS and architecture specific.
+* __File Format__ to be followed for executable files by the compiler. OS specific and architecture independent.
+* __Low level system call interface__ : Architecture dependent.
+* __Low level runtime library interface__ : consists of user level routines which provide a layer of abstraction between the low level system call interface and the application program by providing a unified interface for all system calls, hiding low level interrupt details from the application.
+
+### Virtual Address Space Model
+The virtual address space of any eXpOS process is logically divided into four parts namely: **Shared Library, Heap, Code & Stack**.
+
+_Shared library_ can be shared by more than one executable file. The maximum size of this memory region is **X_LSIZE**.
+
+eXpOS provides a library that provides a unified interface for system calls and dynamic memory allocation/deallocation routines. The library is pre-loaded into memory at the time of OS startup and is linked to the address space of a process when an executable program is loaded into the memory for execution if required (as determined by the Library flag in the executable file) . The eXpOS implementation for the XSM architecture discussed here sets X_LSIZE to 1024 words. Thus the shared library will be loaded into the region between memory addresses **0 and 1023** in the address space of the process.
+
+_Heap_ is the portion of the address space of a process reserved as the memory pool from which dynamic memory allocation is done by the allocator routines in the shared library (for example, memory allocated via malloc in C). The maximum size of this memory region is X_HSIZE. The eXpOS implementation for the XSM architecture discussed here sets X_HSIZE to 1024 words. Thus the heap region will be between memory addresses **1024 and 2047** in the address space of the process.
+
+_Code_ contains the header and code part of the XEXE executable file, which is loaded by the eXpOS loader from the file system when the Exec system call is executed. The first eight words of the executable file contains the header. The rest of the code region contains the XSM instructions. The total size of code section cannot exceed X_CSIZE. The eXpOS implementation for the XSM architecture discussed here sets X_CSIZE to 2048 words. Hence, the code region will be between memory addressess 2048 and 4095 in the address space of the process.
+
+
+
+## 9. Handling Timer Interrupt
+
+XSM has a timer device which can be set to interrupt the machine at regular intervals of time. The following code will set the timer interrupt interval as ten instructions in unpriviledged mode.
+
+```
+./xsm --timer 10
+```
+
+The machine does the following actions on timer interrupt:
+
+1. Push the IP value into the top of the stack.
+2. Set IP to value stored in the interrupt vector table entry for the timer interrupt handler. The vector table entry for timer interrupt is located at physical address 492 in page 9 (ROM) of XSM and the value 2048 is preset in this location.
+3. Machine then switches to the priviledged mode and address translation is disabled. Hence, next instruction will be fetched from the physical address 2048.
+
+**Interrupts are disabled when machine runs in the priviledged mode so that there are no race conditions.** After returning from the timer interrupt handler,  the next entry into the handler occurs only after the machine executes another ten instructions in user mode.
+
+> The timer device can be used to ensure that priviledged code gets control of the machine at regular intervals of time. This is necessary to ensure that an application onve started is not allowed to run "forever". in a time-sharing environment, timer handler invokes the scheduler of the OS to do a context switch to a different process when one process has completed its time quantum.
+
+### Modifications to OS Startup Code
+
+Add the code to load the
