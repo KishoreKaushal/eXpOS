@@ -1,0 +1,13 @@
+alias sumsqr R2;
+sumsqr = 0;
+alias counter R0;
+counter = 0;
+alias temp R3;
+temp = 0;
+while(counter <= 20) do
+    temp = counter * counter;    
+    sumsqr = sumsqr + temp;
+    counter = counter + 1 ;
+endwhile;
+print sumsqr;
+

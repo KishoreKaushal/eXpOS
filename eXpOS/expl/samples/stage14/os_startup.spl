@@ -1,0 +1,100 @@
+// loading idle code from the disk 
+loadi(69,11);
+loadi(70,12);
+
+// loading the boot module (MOD_7)
+loadi(54 , 67);
+loadi(55 , 68);
+
+// loading the scheduler module (MOD_5)
+loadi(50,63);
+loadi(51,64);
+
+print "Booting..";
+
+// -------------------CALLING BOOT MODULE--------------------
+// SP = (user Area Page of IDLE)*512 - 1
+// this sets up stack for calling boot module 
+SP = 82*512 - 1;
+
+breakpoint;
+call MOD_7;
+print "IDLE..";
+
+// ------------ This is for the IDLE process ----------------
+
+// as pid of the idle process is 0
+PTBR = PAGE_TABLE_BASE;
+
+// total address space is 10
+PTLR = 10;
+
+
+//Library
+// giving the library support to the IDLE process 
+[PTBR+0] = 63;
+[PTBR+1] = "0100";
+[PTBR+2] = 64;
+[PTBR+3] = "0100";
+
+//Heap
+[PTBR+4] = -1;
+[PTBR+5] = "0000";
+[PTBR+6] = -1;
+[PTBR+7] = "0000";
+
+//Code : starting logical address: 4*512 = 2048
+
+// first 8 word contains meta-data
+// hence actual entry point is 2056
+
+[PTBR+8] = 69;
+[PTBR+9] = "0100";
+[PTBR+10] = 70;
+[PTBR+11] = "0100";
+[PTBR+12] = -1;
+[PTBR+13] = "0000";
+[PTBR+14] = -1;
+[PTBR+15] = "0000";
+
+//Stack
+[PTBR+16] = 81;
+[PTBR+17] = "0110";
+[PTBR+18] = -1;
+[PTBR+19] = "0110";
+
+// setting user area page number in the process table 
+[PROCESS_TABLE + 11 ] =  82;
+
+// setting the PID of the IDLE process 
+[PROCESS_TABLE + 1] = 0;
+
+// setting the STATE of the IDLE process to RUNNING
+[PROCESS_TABLE + 4 ] =  RUNNING;
+
+// setting the UPTR entry for the IDLE process 
+[PROCESS_TABLE + 13 ] =  8*512;
+
+// setting the KPTR entry for the IDLE process to 0
+[PROCESS_TABLE + 12 ] =  0;
+
+// setting the PTBR field for the IDLE process to PAGE_TABLE_BASE
+[PROCESS_TABLE + 14 ] =  PTBR;
+
+// setting the PTLR field for the IDLE process to 10
+[PROCESS_TABLE + 15 ] =  10;
+
+// --------------------------------------------------------------------------------
+// Initialise the machine's PTBR and PTLR registers for scheduling the INIT process.
+// already Initialised 
+
+// setting the IP for the IDLE process on top of the User Stack
+[81*512] = [69*512 + 1];
+SP = 8*512;
+
+breakpoint;
+
+[SYSTEM_STATUS_TABLE + 1] = 0;
+
+print "Stage 14";
+ireturn;

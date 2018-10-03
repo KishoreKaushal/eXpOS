@@ -1,0 +1,38 @@
+decl
+	int num1 ,num2 , temp , flag, pro, divi;
+enddecl
+
+int main(){
+begin
+	num1 = 3;
+	temp = exposcall("Write" , -2 , 2);
+
+	while (num1 <= 100) do
+		flag = 0;
+		num2 = 3;
+
+		pro = num2 * num2;
+		
+		while (pro <= num1) do 
+			divi = num1 % num2;
+		
+			if ((divi == 0)) then 
+				flag = 1;
+				break;
+			endif;
+		
+			num2 = num2 + 1;
+			pro = num2 * num2;
+		endwhile;
+		
+		if ((flag == 0)) then
+			temp = exposcall("Write" , -2 , num1);
+		endif;
+		
+		num1 = num1 + 2 ;
+
+	endwhile;
+
+	return 0;
+end
+}

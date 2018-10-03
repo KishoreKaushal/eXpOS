@@ -1,0 +1,68 @@
+// Switch from the user stack to kernel stack of the currently executing process 
+
+// storing the user stack pointer of the current running process to the UPTR process entry
+[PROCESS_TABLE + ( [SYSTEM_STATUS_TABLE + 1] * 16) + 13] = SP;
+
+// Setting SP to UArea Page number * 512 - 1, 
+// this is the place where backup instruction will store all the register values
+SP = [PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1]* 16) + 11] * 512 - 1;
+
+// save the register context using the backup instruction
+backup;
+
+
+alias currentPID R0;
+currentPID = [SYSTEM_STATUS_TABLE + 1];
+
+alias process_table_entry R1;
+process_table_entry = PROCESS_TABLE + currentPID * 16;
+
+// KPTR
+[process_table_entry + 12] = SP % 512;
+
+// PTBR
+[process_table_entry + 14] = PTBR;
+
+// PTLR
+[process_table_entry + 15] = PTLR;
+
+// state
+[process_table_entry + 4] = READY;
+
+
+// toggle between the processes
+alias newPID R2;
+if (currentPID == 0) then 
+    newPID = 1;
+else 
+    newPID = 0;
+endif;
+
+// Restore the SP, PTBR and PTLR values from the Process Table entry for the new process.
+alias new_process_table R3;
+new_process_table = PROCESS_TABLE + newPID *16;
+
+// set the kernel SP, PTBR, PTLR 
+SP = [new_process_table + 11]*512 + [new_process_table + 12];
+PTBR = [new_process_table + 14];
+PTLR = [new_process_table + 15];
+
+
+// set the PID of the newly scheduled process 
+[SYSTEM_STATUS_TABLE + 1] = newPID;
+
+// if the newly found process is in CREATED state
+// set SP to top of its user stack and return to user mode.
+
+if ([new_process_table + 4] == CREATED) then 
+    [new_process_table + 4] = RUNNING;
+	SP = [new_process_table + 13];
+	ireturn;
+endif;
+
+[new_process_table + 4] = RUNNING;
+
+restore;
+SP = [PROCESS_TABLE + ( [SYSTEM_STATUS_TABLE + 1] * 16) + 13];
+
+ireturn;

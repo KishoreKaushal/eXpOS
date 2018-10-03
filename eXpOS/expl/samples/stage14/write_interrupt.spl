@@ -1,0 +1,102 @@
+// INT 7
+//print "write";
+// getting the MODE flag
+
+//Set the MODE FLAG field in the process table to the system call number which is 5 
+//for write system call. 
+//To get the process table of current process, 
+//use the PID obtained from the system status table. 
+//MODE FLAG field in the process table is used to indicate 
+//whether the current process is executing in a system call, 
+//exception handler or user mode.
+
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 9] = 5;
+
+// Store the value of user SP in a register as we need it for further computations
+
+alias userSP R0;
+userSP = SP;
+
+// Switch the stack from user stack to kernel stack
+// Save the value of SP in the user SP field of Process Table entry of the process.
+// Setting the UPTR
+
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 13] = userSP;
+
+// setting the value of SP to the beginning of the kernel stack 
+// User Area Page Number * 512 - 1
+// User Area Page Number => [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 11]
+
+SP = [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 12] * 512 - 1;
+
+// in kernel mode the address are not logical
+// Hence to access the file descriptor (argument 1) 
+// we must calculate the physical address of the memory location where it is stored.
+// Conventions:
+// syscallNumber <- address_translate(UserSP - 5);
+// Argument_1    <- address_translate(UserSP - 4);
+// Argument_2    <- address_translate(UserSP - 3);
+// Argument_3    <- address_translate(UserSP - 2);
+
+alias physicalPageNum R1;
+alias offset R2;
+alias fileDescPhysicalAddr R3;
+
+
+// Address Translation scheme:
+// Location of Page table entry = PTBR + 2 x (Logical Address / 512)
+// Physical Page Number = [Location of Page table entry]
+// offset = Logical Address % 512
+// Physical Address = Physical Page Number x 512 + offset
+
+physicalPageNum = [PTBR + 2 * ( (userSP - 4) / 512)];
+offset = (userSP - 4) % 512;
+fileDescPhysicalAddr = (physicalPageNum * 512) + offset;
+alias fileDescriptor R4;
+fileDescriptor=[fileDescPhysicalAddr];
+
+// Check whether the file descriptor obtained in above step is valid or not. 
+// In this stage it should be -2 because file descriptor for console is -2. 
+// If the file descriptor is not equal to -2, store -1 as a return value. 
+// According to system call convention, 
+// return value is stored at memory location userSP -1 in the user stack. 
+
+if (fileDescriptor != -2)
+then
+	 alias physicalAddrRetVal R5;
+	 physicalAddrRetVal = ([PTBR + 2 * ((userSP - 1) / 512)] * 512) + ((userSP - 1) % 512);
+	 [physicalAddrRetVal] = -1;
+else
+    //print "write1";
+    //code when argument 1 is valid
+    // Calculate physical address of the argument 2 and extract the value from it , 
+    // which is the word to be printed to the console.
+
+    alias word R5;
+    word = [[PTBR + 2 * ((userSP - 3) / 512)] * 512 + ((userSP - 3) % 512)];
+    print word;
+
+    // Set the return value as 0 indicating success. According to system call convention, 
+    // return value is stored at memory location userSP -1 in the user stack.
+
+    alias physicalAddrRetVal R6;
+    physicalAddrRetVal = ([PTBR + 2 * (userSP - 1)/ 512] * 512) + ((userSP - 1) % 512);
+    [physicalAddrRetVal] = 0;
+
+endif;
+
+
+
+// set back stack pointer to UserSP
+SP = userSP;
+
+// Reset the MODE FLAG field in the process table to 0. 
+// Value 0 indicates that process is running in user mode.
+
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 9] = 0;
+ireturn;
+
+
+
+
+

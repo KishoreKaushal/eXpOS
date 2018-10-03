@@ -1,0 +1,57 @@
+0
+2056
+0
+0
+0
+0
+0
+0
+MOV R0, 1
+MOV R2, 20
+GE R2, R0
+JZ R2, 2110
+MOV R1, R0
+BRKP
+// saving register context
+PUSH R0
+PUSH R1
+PUSH R2
+
+// pushing system call number and arguments
+// write system call number is 5
+MOV R0, 5
+MOV R2, -2
+// Push the system call on the stack
+PUSH R0
+//Argument 1: file descriptor which is -2 for the terminal
+PUSH R2
+//Argument 2: word which has to be printed on the terminal
+PUSH R1
+//Argument 3: in this case we don't require argument 3 
+PUSH R0
+
+//  pushing space for return value
+PUSH R0
+
+BRKP
+// invoking the interrupt 
+INT 7
+
+// poping out return value and ignore
+POP R1
+
+// pop out arguments and system call number and ignore
+POP R1
+POP R1
+POP R1
+POP R1
+
+//  restoring the register context
+POP R2
+POP R1
+POP R0
+
+ADD R0, 1
+JMP 2058
+
+INT 10

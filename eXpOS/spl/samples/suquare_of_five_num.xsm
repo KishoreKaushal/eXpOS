@@ -1,0 +1,32 @@
+//Program to calculate Squares of first 5 numbers
+
+// R0 will hold value of n
+// R1 will hold value of n^2
+
+//Initialising R0(n) to 1
+MOV R0, 1
+
+_L1:
+
+// Exit loop if n > 5
+MOV R2, 5
+GE R2, R0
+JZ R2, _L2
+
+// Computing n^2 in R1
+MOV R1, R0
+MUL R1, R0
+
+//breakpoint instruction (to view contents of R1)
+BRKP
+
+// n = n + 1
+ADD R0, 1
+
+JMP _L1
+
+_L2:
+
+EXIT
+
+// End of Program.
